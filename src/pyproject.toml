@@ -1,0 +1,11 @@
+[project]
+name = "src"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "pandas>=3.0.1",
+    "prefect[sqlalchemy]>=3.6.18",
+    "psycopg2-binary>=2.9.11",
+]
