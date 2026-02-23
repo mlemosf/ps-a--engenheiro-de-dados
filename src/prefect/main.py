@@ -173,6 +173,7 @@ def silver_carts():
     df2["product_id"] = products["productId"]
     df2["product_quantity"] = products["quantity"]
     df2["ingestion_date"] = datetime.today()
+    df2["date"] = df2["date"].apply(lambda x: datetime.fromisoformat(x.replace('Z', '+00:00')))
     df2.drop(["products", "__v"], axis=1, inplace=True)
     logger.info(df2)
 
@@ -247,7 +248,7 @@ def dim_carts():
     logger = get_run_logger()
     df = read_table_into_df("silver_carts")
 
-    df2 = df[["id", "product_id", "product_quantity", "date", "ingestion_date"]]
+    df2 = df[["id", "product_id", "user_id", "product_quantity", "date", "ingestion_date"]]
 
     with SqlAlchemyConnector.load("postgres-credentials") as connector:
         engine = connector.get_engine()
@@ -258,6 +259,28 @@ def dim_carts():
             index=False
         )
         logger.info(f"Stored {len(df)} carts to database")
+
+@flow
+def fact_products_in_cart_by_day():
+
+    logger = get_run_logger()
+    with SqlAlchemyConnector.load("postgres-credentials") as connector:
+        engine = connector.get_engine()
+        df = pd.read_sql_query("""
+            select count(dc.id) as instances, du.id as user_id, dg.id as geolocation_id, dp.id as product_id , date_trunc('day', dc.date) as day
+            from dim_carts dc
+            join dim_products dp on dp.id = dc.product_id
+            join dim_users du on du.id = dc.user_id
+            join dim_geolocation dg on du.id = dg.user_id
+            group by date_trunc('day', dc.date), du.id, dp.id, dg.id;
+        """, con=engine)
+        df.to_sql(
+            name="fact_product_in_cart_by_day",
+            con=engine,
+            if_exists="append",
+            index=False
+        )
+        logger.info(f"Stored {len(df)} instances to database")
 
 
 
@@ -279,6 +302,7 @@ def main():
     dim_geolocation()
     dim_products()
     dim_carts()
+    fact_products_in_cart_by_day()
 
 
 #if __name__ == "__main__":
