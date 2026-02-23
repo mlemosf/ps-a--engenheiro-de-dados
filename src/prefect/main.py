@@ -194,7 +194,7 @@ def dim_users():
     logger = get_run_logger()
     df = read_table_into_df("silver_users")
 
-    df2 = df[["id", "email", "phone"]]
+    df2 = df[["id", "email", "phone", "ingestion_date"]]
 
     with SqlAlchemyConnector.load("postgres-credentials") as connector:
         engine = connector.get_engine()
@@ -211,7 +211,7 @@ def dim_geolocation():
     logger = get_run_logger()
     df = read_table_into_df("silver_geolocation")
 
-    df2 = df[["user_id", "city", "lat", "long"]]
+    df2 = df[["user_id", "city", "lat", "long", "ingestion_date"]]
     df2["id"] = df2.index + 1
     df3 = df2[["id", "user_id", "city", "lat", "long"]]
 
@@ -230,7 +230,7 @@ def dim_products():
     logger = get_run_logger()
     df = read_table_into_df("silver_products")
 
-    df2 = df[["id", "title", "price", "category", "rating_rate", "rating_count"]]
+    df2 = df[["id", "title", "price", "category", "rating_rate", "rating_count", "ingestion_date"]]
 
     with SqlAlchemyConnector.load("postgres-credentials") as connector:
         engine = connector.get_engine()
@@ -247,7 +247,7 @@ def dim_carts():
     logger = get_run_logger()
     df = read_table_into_df("silver_carts")
 
-    df2 = df[["id", "product_id", "product_quantity", "date"]]
+    df2 = df[["id", "product_id", "product_quantity", "date", "ingestion_date"]]
 
     with SqlAlchemyConnector.load("postgres-credentials") as connector:
         engine = connector.get_engine()
