@@ -124,7 +124,7 @@ def silver_geolocation():
     df2["zip_code"] = address["zipcode"]
     df2["ingestion_date"] = datetime.today()
 
-    df2.rename(columns={"id": "user_id"})
+    df2.rename(columns={"id": "user_id"}, inplace=True)
 
     logger.info(df2)
 
@@ -188,6 +188,79 @@ def silver_carts():
         )
         logger.info(f"Stored {len(df)} users to database")
 
+# Gold tables
+@flow
+def dim_users():
+    logger = get_run_logger()
+    df = read_table_into_df("silver_users")
+
+    df2 = df[["id", "email", "phone"]]
+
+    with SqlAlchemyConnector.load("postgres-credentials") as connector:
+        engine = connector.get_engine()
+        df2.to_sql(
+            name="dim_users",
+            con=engine,
+            if_exists="append",
+            index=False
+        )
+        logger.info(f"Stored {len(df)} users to database")
+
+@flow
+def dim_geolocation():
+    logger = get_run_logger()
+    df = read_table_into_df("silver_geolocation")
+
+    df2 = df[["user_id", "city", "lat", "long"]]
+    df2["id"] = df2.index + 1
+    df3 = df2[["id", "user_id", "city", "lat", "long"]]
+
+    with SqlAlchemyConnector.load("postgres-credentials") as connector:
+        engine = connector.get_engine()
+        df3.to_sql(
+            name="dim_geolocation",
+            con=engine,
+            if_exists="append",
+            index=False
+        )
+        logger.info(f"Stored {len(df)} geolocations to database")
+
+@flow
+def dim_products():
+    logger = get_run_logger()
+    df = read_table_into_df("silver_products")
+
+    df2 = df[["id", "title", "price", "category", "rating_rate", "rating_count"]]
+
+    with SqlAlchemyConnector.load("postgres-credentials") as connector:
+        engine = connector.get_engine()
+        df2.to_sql(
+            name="dim_products",
+            con=engine,
+            if_exists="append",
+            index=False
+        )
+        logger.info(f"Stored {len(df)} products to database")
+
+@flow
+def dim_carts():
+    logger = get_run_logger()
+    df = read_table_into_df("silver_carts")
+
+    df2 = df[["id", "product_id", "product_quantity", "date"]]
+
+    with SqlAlchemyConnector.load("postgres-credentials") as connector:
+        engine = connector.get_engine()
+        df2.to_sql(
+            name="dim_carts",
+            con=engine,
+            if_exists="append",
+            index=False
+        )
+        logger.info(f"Stored {len(df)} carts to database")
+
+
+
 @flow
 def main():
     # Bronze tables
@@ -200,6 +273,12 @@ def main():
     silver_geolocation()
     silver_products()
     silver_carts()
+
+    # Data warehouse (gold tables)
+    dim_users()
+    dim_geolocation()
+    dim_products()
+    dim_carts()
 
 
 #if __name__ == "__main__":
