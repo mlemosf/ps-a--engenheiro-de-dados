@@ -2,6 +2,13 @@
 
 Esse repositório diz respeito ao processo seletivo da +A Educação para engenheiro de dados.
 
+## Entregáveis
+
+- Código fonte: Presente na pasta src;
+- Diagrama do banco de dados: Arquivo diagrama-modelagem.png;
+- Este arquivo README.md.
+- Arquivo docker-compose.yml presente em src.
+
 ## Etapas
 
 Para a realização desse projeto, segui as seguintes etapas:
@@ -78,7 +85,7 @@ cd src
 docker compose up -d server db
 ```
 
-Isso vai subir os containers do Prefect Server e PostgreSQL:
+Isso vai subir os containers do Prefect Server e PostgreSQL. É importante ver os logs e aguardar que o servidor do Prefect esteja rodando.
 Após isso, é necessário construir e executar o container do pipeline:
 
 ```shell
@@ -117,6 +124,7 @@ Abaixo segue um print de todas as tabelas criadas, conforme diagrama:
 Após a devida estruturação dos dados, um time de negócio (ex: analistas de dados do time de vendas) podem realizar buscas de forma simples no conjunto de dados. Abaixo seguem alguns exemplos:
 
 - Buscar os produtos em mais carrinhos por cidade:
+
 ```sql
 select count(instances), dg.city as city
 from fact_product_in_cart_by_day fpicbd
@@ -143,4 +151,16 @@ from fact_product_in_cart_by_day fpicbd
 join dim_carts dc on dc.product_id = fpicbd.product_id
 join dim_products dp on dp.id = fpicbd.product_id
 group by dp.category;
+```
+
+- Mostrar informações de contato do cliente com mais produtos adicionados em carrinho:
+
+```sql
+select du.email, du.phone, count(instances)
+from fact_product_in_cart_by_day fpicbd 
+inner join dim_carts dc on dc.product_id = fpicbd.product_id
+inner join dim_users du on du.id = fpicbd.user_id 
+group by du.email, du.phone
+order by count desc
+limit 1;
 ```

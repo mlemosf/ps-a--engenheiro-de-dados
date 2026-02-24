@@ -4,7 +4,7 @@ services:
     ports:
       - "4200:4200"
     volumes:
-      - ./prefect:/root/.prefect
+      - prefect_data:/root/.prefect
     env_file:
       - .env
     environment:
