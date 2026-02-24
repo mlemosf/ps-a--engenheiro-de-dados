@@ -1,5 +1,4 @@
 from prefect import flow, task
-from prefect.blocks.system import Secret
 from prefect.logging import get_run_logger
 from prefect_sqlalchemy import SqlAlchemyConnector
 import requests
@@ -267,17 +266,18 @@ def fact_products_in_cart_by_day():
     with SqlAlchemyConnector.load("postgres-credentials") as connector:
         engine = connector.get_engine()
         df = pd.read_sql_query("""
-            select count(dc.id) as instances, du.id as user_id, dg.id as geolocation_id, dp.id as product_id , date_trunc('day', dc.date) as day
+            select count(distinct dc.product_id) as instances, du.id as user_id, dg.id as geolocation_id, dp.id as product_id , date_trunc('day', dc.date) as day
             from dim_carts dc
             join dim_products dp on dp.id = dc.product_id
             join dim_users du on du.id = dc.user_id
             join dim_geolocation dg on du.id = dg.user_id
             group by date_trunc('day', dc.date), du.id, dp.id, dg.id;
         """, con=engine)
+        logger.info(df)
         df.to_sql(
             name="fact_product_in_cart_by_day",
             con=engine,
-            if_exists="append",
+            if_exists="replace",
             index=False
         )
         logger.info(f"Stored {len(df)} instances to database")
@@ -305,6 +305,6 @@ def main():
     fact_products_in_cart_by_day()
 
 
-#if __name__ == "__main__":
-#    hello_world.serve(name="my-first-deployment", cron="* * * * *")
+if __name__ == "__main__":
+    main.serve(name="ecomerce-product-pipeline")
 main()
