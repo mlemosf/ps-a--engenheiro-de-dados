@@ -58,3 +58,89 @@ O data warehouse é composto de 1 tabela fato e 4 tabelas de dimensão:
 - dim_geolocation: Dimensão de geolocalização de usuários, seguindo modelo SCD tipo 1.
 
 ## Carga
+
+A carga foi realizada  utilizando o orquestrador [Prefect](https://www.prefect.io/), dada sua similaridade com outras ferramentas que utilizei.
+Foi implementado um flow composto por múltiplos subflows, onde existem subflows para cada tabela, que são executados a partir do flow principal `main`. Dessa forma, se define uma ordem clara para a criação das tabelas intermediárias bronze e silver e a criação do data warehouse (tabelas gold), além de se manter uma linhagem de dados clara, o que permite uma análise mais aprofundada por times de cientistas de dados nos dados tratados antes de chegarem ao data warehouse.
+
+O fluxo de carga segue a seguinte ordem:
+
+1. Carregamento dos dados da API;
+2. Armazenamento em tabelas bronze;
+3. Armazenamento em tabelas silver;
+4. Armazenamento no data warehouse.
+
+## Execução do pipeline
+
+Para executar o pipeline, execute todos os containers do arquivo docker-compose.yml:
+
+```shell
+cd src
+docker compose up -d server db
+```
+
+Isso vai subir os containers do Prefect Server e PostgreSQL:
+Após isso, é necessário construir e executar o container do pipeline:
+
+```shell
+docker compose up -d --build deployment
+```
+
+Após esses comandos, acesse a interface gráfica do Prefect em http://localhost:4200.
+
+Para executar o pipeline em formato batch, realize os seguintes passos:
+
+1. Acesse a aba "Deployments";
+2. Clique em "main";
+3. No canto superior direito, clique em "Run" e selecione "Quick run".
+
+Isso vai criar uma nova run do pipeline, e pode ser visto pela interface do Prefect.
+Ao fim desse processo, os dados serão carregados no banco de dados.
+
+## Acesso as dados
+
+Após a execução do pipeline, as tabelas descritas anteriormente terão sido criads no Data Warehouse.
+Para acessá-las, podemos utilizar uma interface gráfica como o [DBeaver](https://dbeaver.io/download/).
+Nesse exemplo, vamos utilizar a interface de linha de comando do PostgreSQL:
+
+```shell
+docker compose exec db bash
+psql -U prefect prefect
+```
+
+Para listar todas as tabelas, execute \d.
+Abaixo segue um print de todas as tabelas criadas, conforme diagrama:
+
+![tabelas](print-tabela.png)
+
+## Buscas
+
+Após a devida estruturação dos dados, um time de negócio (ex: analistas de dados do time de vendas) podem realizar buscas de forma simples no conjunto de dados. Abaixo seguem alguns exemplos:
+
+- Buscar os produtos em mais carrinhos por cidade:
+```sql
+select count(instances), dg.city as city
+from fact_product_in_cart_by_day fpicbd
+inner join dim_geolocation dg on fpicbd.geolocation_id = dg.id
+group by city
+order by count desc;
+```
+
+- Ordenar as categorias de produto mais em alta:
+
+```sql
+select count(dc.id) as cart_count, dp.category 
+from dim_carts dc
+join dim_products dp on dc.product_id = dp.id
+group by dp.category
+order by cart_count desc;
+```
+
+- Mostrar a quantidade de produtos em carrinhos por categoria:
+
+```sql
+select dp.category, count(fpicbd.instances)
+from fact_product_in_cart_by_day fpicbd 
+join dim_carts dc on dc.product_id = fpicbd.product_id
+join dim_products dp on dp.id = fpicbd.product_id
+group by dp.category;
+```

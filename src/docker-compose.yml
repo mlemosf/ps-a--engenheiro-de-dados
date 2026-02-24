@@ -1,0 +1,55 @@
+services:
+  server:
+    image: prefecthq/prefect:3-latest
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./prefect:/root/.prefect
+    env_file:
+      - .env
+    environment:
+      - PREFECT_SERVER__DATABASE__CONNECTION_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/prefect
+      - PREFECT_SERVER__HASURA__ADMIN_SECRET=myadminsecretkey
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=db
+    depends_on:
+      - db
+    networks:
+      - prefect
+    command: sh -c "pip install prefect[sqlalchemy] && prefect block register -m prefect_sqlalchemy && prefect server start --host 0.0.0.0"
+
+  deployment:
+      build: .
+      networks:
+        - prefect
+      depends_on:
+         - server
+      env_file:
+        - .env
+      environment:
+        - PREFECT_API_URL=http://server:4200/api
+        - DB_USER=${DB_USER}
+        - DB_PASSWORD=${DB_PASSWORD}
+        - DB_HOST=db
+        - DB_PREFECT=postgresql+asyncpg://prefect:prefect@db:5432/prefect
+
+  db:
+    image: postgres:13
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=prefect
+      - POSTGRES_PASSWORD=prefect
+      - POSTGRES_DB=prefect
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - prefect
+
+volumes:
+  prefect_data:
+  postgres_data:
+
+networks:
+    prefect:

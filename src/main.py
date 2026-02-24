@@ -1,11 +1,11 @@
 from prefect import flow, task
 from prefect.logging import get_run_logger
-from prefect_sqlalchemy import SqlAlchemyConnector
+from prefect_sqlalchemy import SqlAlchemyConnector, ConnectionComponents, SyncDriver
 import requests
 import pandas as pd
 from sqlalchemy.types import JSON
 from datetime import datetime
-
+import os
 
 @task()
 def read_api(path) -> pd.DataFrame:
@@ -95,8 +95,6 @@ def silver_users():
     df2["last_name"] = name["lastname"]
     df2["ingestion_date"] = datetime.today()
 
-    logger.info(df2)
-
     with SqlAlchemyConnector.load("postgres-credentials") as connector:
         engine = connector.get_engine()
         df2.to_sql(
@@ -112,7 +110,6 @@ def silver_geolocation():
     logger = get_run_logger()
     df = read_table_into_df("bronze_users")
     address = pd.json_normalize(df["address"], sep="_")
-    logger.info(address)
 
     df2 = df[["id"]]
     df2["city"] = address["city"]
@@ -150,8 +147,6 @@ def silver_products():
 
     df2.rename(columns={"id": "user_id"})
 
-    logger.info(df2)
-
     with SqlAlchemyConnector.load("postgres-credentials") as connector:
         engine = connector.get_engine()
         df2.to_sql(
@@ -174,7 +169,6 @@ def silver_carts():
     df2["ingestion_date"] = datetime.today()
     df2["date"] = df2["date"].apply(lambda x: datetime.fromisoformat(x.replace('Z', '+00:00')))
     df2.drop(["products", "__v"], axis=1, inplace=True)
-    logger.info(df2)
 
     df2.rename(columns={"userId": "user_id"}, inplace=True)
 
@@ -286,6 +280,20 @@ def fact_products_in_cart_by_day():
 
 @flow
 def main():
+
+    # Register the block
+    connector = SqlAlchemyConnector(
+        connection_info=ConnectionComponents(
+            driver=SyncDriver.POSTGRESQL_PSYCOPG2,
+            username=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            host=os.getenv("DB_HOST"),
+            port=5432,
+            database="prefect",
+        )
+    )
+    connector.save("postgres-credentials", overwrite=True)
+
     # Bronze tables
     bronze_users()
     bronze_products()
@@ -306,5 +314,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main.serve(name="ecomerce-product-pipeline")
-main()
+    main.serve()
