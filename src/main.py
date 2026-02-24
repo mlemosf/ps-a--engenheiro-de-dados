@@ -267,7 +267,7 @@ def fact_products_in_cart_by_day():
             join dim_geolocation dg on du.id = dg.user_id
             group by date_trunc('day', dc.date), du.id, dp.id, dg.id;
         """, con=engine)
-        logger.info(df)
+
         df.to_sql(
             name="fact_product_in_cart_by_day",
             con=engine,
