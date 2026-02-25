@@ -170,4 +170,4 @@ limit 1;
 
 ## Limitações 
 
-O uso do PostgreSQL como a base de dados ao invés de algo como [Delta Lake](https://delta.io/) torna as inserções idempotentes mais complexas. O uso do Delta Lake e a capacidade de inserir apenas dados novos tornaria esse pipeline muito mais simples.
+O uso do PostgreSQL como a base de dados ao invés de algo como [Delta Lake](https://delta.io/) torna as inserções idempotentes mais complexas. O uso do Delta Lake e a capacidade de inserir apenas dados novos tornaria esse pipeline muito mais simples, dada a sua capacidade de [inserir apenas dados novos utilizando o comando MERGE](https://docs.delta.io/delta-update/#upsert-into-a-table-using-merge).
