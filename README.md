@@ -76,6 +76,8 @@ O fluxo de carga segue a seguinte ordem:
 3. Armazenamento em tabelas silver;
 4. Armazenamento no data warehouse.
 
+O armazenamento de dados em todas as tabelas, exceto a tabela fato, preserva a idempotência, onde são carregados dados com uma chave primária ainda não existente. Dessa forma, subsequentes execuções do pipeline não criam dados repetidos, o que permite, por exemplo, executar estágios individuais do pipeline.
+m
 ## Execução do pipeline
 
 Para executar o pipeline, execute todos os containers do arquivo docker-compose.yml:
