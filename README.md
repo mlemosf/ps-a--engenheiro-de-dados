@@ -104,6 +104,7 @@ Para executar o pipeline em formato batch, realize os seguintes passos:
 
 Isso vai criar uma nova run do pipeline, e pode ser visto pela interface do Prefect.
 Ao fim desse processo, os dados serão carregados no banco de dados.
+Vale ressaltar que, devido ao caráter idempotente do pipeline, múltiplas execuções não inserem os mesmos dados nas tabelas.
 
 ## Acesso as dados
 
@@ -166,3 +167,7 @@ group by du.email, du.phone
 order by count desc
 limit 1;
 ```
+
+## Limitações 
+
+O uso do PostgreSQL como a base de dados ao invés de algo como [Delta Lake](https://delta.io/) torna as inserções idempotentes mais complexas. O uso do Delta Lake e a capacidade de inserir apenas dados novos tornaria esse pipeline muito mais simples.
